@@ -1,0 +1,560 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hardcore Habit Matrix | 硬核习惯追踪看板</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #0f172a;
+      --card-border: #1e293b;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --emerald: #10b981;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --indigo: #6366f1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      padding: 24px;
+      line-height: 1.5;
+    }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    .container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    
+    /* 顶部导航 */
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--emerald);
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+    }
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #334155;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn:hover { background: #334155; color: #fff; }
+    .btn-danger { background: rgba(244, 63, 94, 0.15); color: #fda4af; border-color: rgba(244, 63, 94, 0.3); }
+    .btn-danger:hover { background: rgba(244, 63, 94, 0.3); }
+    .btn-primary { background: var(--emerald); color: #022c22; border-color: var(--emerald); font-weight: 700; }
+    .btn-primary:hover { background: #34d399; }
+
+    /* KPI 卡片 */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 18px;
+    }
+    .card-danger {
+      background: rgba(76, 5, 25, 0.2);
+      border-color: rgba(244, 63, 94, 0.3);
+    }
+    .card-title { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-val { font-size: 28px; font-weight: 800; margin-top: 6px; display: flex; justify-content: space-between; align-items: baseline; }
+    .progress-bar-bg { background: #1e293b; height: 6px; border-radius: 3px; margin-top: 12px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; transition: width 0.3s; }
+
+    /* 矩阵主体 */
+    .table-container { overflow-x: auto; margin-top: 14px; }
+    table { width: 100%; border-collapse: collapse; min-width: 820px; font-size: 13px; }
+    th, td { padding: 12px 10px; border-bottom: 1px solid rgba(51, 65, 85, 0.4); text-align: left; }
+    th { color: var(--text-muted); font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .th-today { background: rgba(16, 185, 129, 0.1); color: var(--emerald); border-radius: 6px 6px 0 0; }
+    .cell-today { background: rgba(16, 185, 129, 0.05); }
+
+    /* 打卡按钮格 */
+    .check-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: bold;
+      transition: transform 0.1s, background 0.15s;
+      user-select: none;
+    }
+    .check-btn:active { transform: scale(0.9); }
+    .status-1 { background: var(--emerald); color: #022c22; border-color: var(--emerald); box-shadow: 0 0 10px rgba(16,185,129,0.3); }
+    .status-05 { background: var(--amber); color: #451a03; border-color: var(--amber); box-shadow: 0 0 10px rgba(245,158,11,0.3); }
+    .status-0 { background: #1e293b; color: transparent; border-color: #334155; }
+
+    .tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+    .tag-3 { background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }
+    .tag-2 { background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.3); }
+    .tag-1 { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+
+    /* 表单输入 */
+    .form-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--card-border); }
+    .input-box {
+      background: #020617;
+      border: 1px solid #334155;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    .input-box:focus { border-color: var(--emerald); }
+
+    /* 原生 SVG 图表卡片 */
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 16px; }
+    .chart-box { height: 220px; width: 100%; display: flex; align-items: flex-end; gap: 14px; padding-top: 20px; }
+    .bar-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; }
+    .bar-stack { width: 100%; max-width: 36px; border-radius: 4px; overflow: hidden; display: flex; flex-direction: column-reverse; }
+    .bar-seg-full { background: var(--emerald); width: 100%; transition: height 0.3s; }
+    .bar-seg-mve { background: var(--amber); width: 100%; transition: height 0.3s; }
+    .bar-label { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+    .h-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 12px; }
+    .h-bar-label { width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .h-bar-track { flex: 1; height: 14px; background: #1e293b; border-radius: 7px; overflow: hidden; }
+    .h-bar-fill { height: 100%; border-radius: 7px; transition: width 0.3s; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- 顶部 -->
+    <header>
+      <div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="badge">SYSTEM V2.0</span>
+          <h1 style="font-size: 20px; font-weight:700;">硬核习惯与执行力审计看板</h1>
+        </div>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">加权计分 · 区分全量(1.0)与保底(0.5) · 暴晒短板</p>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn" onclick="resetDemo()">重置演示数据</button>
+        <button class="btn btn-danger" onclick="clearLogs()">清空打卡</button>
+        <button class="btn" onclick="exportJSON()">导出 JSON</button>
+      </div>
+    </header>
+
+    <!-- 顶部 KPI -->
+    <section class="kpi-grid">
+      <div class="card">
+        <div class="card-title">今日加权执行率</div>
+        <div class="kpi-val"><span id="kpi-today" class="mono">0%</span><span id="kpi-today-sub" style="font-size:12px; color:var(--text-muted);">0/0 分</span></div>
+        <div class="progress-bar-bg"><div id="kpi-today-bar" class="progress-bar-fill" style="background:var(--emerald); width:0%;"></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">本周综合得分率</div>
+        <div class="kpi-val"><span id="kpi-week" class="mono" style="color:var(--indigo);">0%</span><span style="font-size:12px; color:var(--text-muted);">周期审计</span></div>
+        <div class="progress-bar-bg"><div id="kpi-week-bar" class="progress-bar-fill" style="background:var(--indigo); width:0%;"></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">最长连续打卡 (STREAK)</div>
+        <div class="kpi-val"><span id="kpi-streak" class="mono" style="color:var(--amber);">0 天</span></div>
+        <div id="kpi-streak-name" style="font-size:11px; color:var(--text-muted); margin-top:8px;">-</div>
+      </div>
+
+      <div class="card card-danger">
+        <div class="card-title" style="color:var(--rose);">⚠️ 本周短板 (逃避项)</div>
+        <div id="kpi-weakest-name" style="font-size:16px; font-weight:700; color:#ffe4e6; margin-top:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">无数据</div>
+        <div id="kpi-weakest-rate" class="mono" style="font-size:12px; color:var(--rose); margin-top:4px;">达成率: 0%</div>
+      </div>
+    </section>
+
+    <!-- 矩阵区 -->
+    <section class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="btn" onclick="shiftWeek(-1)">← 上周</button>
+          <span id="week-label" class="mono" style="font-size:14px; font-weight:700;">2026-10-12 ~ 2026-10-18</span>
+          <button class="btn" onclick="shiftWeek(1)">下周 →</button>
+          <button class="btn" onclick="goToday()">回到本周</button>
+        </div>
+        <div style="font-size:12px; display:flex; gap:12px; color:var(--text-muted);">
+          <span><span style="color:var(--emerald);">■</span> 全量完成 (1.0)</span>
+          <span><span style="color:var(--amber);">■</span> 最低保底 (0.5)</span>
+          <span><span style="color:#475569;">■</span> 未打卡 (0)</span>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr id="matrix-head"></tr>
+          </thead>
+          <tbody id="matrix-body"></tbody>
+        </table>
+      </div>
+
+      <!-- 添加习惯 -->
+      <div class="form-row">
+        <input type="text" id="inp-name" placeholder="习惯名称 (如: 核心专业推导 90m)" class="input-box" style="flex:2; min-width:200px;">
+        <input type="text" id="inp-mve" placeholder="保底标准 (如: 整理1页笔记)" class="input-box" style="flex:1.5; min-width:180px;">
+        <select id="inp-weight" class="input-box">
+          <option value="3">🔥 权重 3x (核心)</option>
+          <option value="2" selected>⚡ 权重 2x (重要)</option>
+          <option value="1">📌 权重 1x (常规)</option>
+        </select>
+        <button class="btn btn-primary" onclick="addNewHabit()">+ 添加追踪项</button>
+      </div>
+    </section>
+
+    <!-- 图表分析区 (原生轻量渲染) -->
+    <section class="charts-grid">
+      <div class="card">
+        <div class="card-title">每日执行得分堆叠图 (绿: 全量 / 黄: 保底)</div>
+        <div id="daily-bar-container" class="chart-box"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">单项习惯达成率对比 (低于 60% 标红)</div>
+        <div id="habit-bar-container" style="margin-top:16px;"></div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // 基础存储与状态
+    const KEY = 'HARDCORE_HABITS_V2_DATA';
+    let weekOffset = 0;
+    let fallbackMemory = null;
+
+    function getInitialData() {
+      const dates = getWeekDates(0);
+      const d0 = dates[0].iso, d1 = dates[1].iso, d2 = dates[2].iso;
+      return {
+        habits: [
+          { id: 'h1', name: '核心专业深度钻研 / 复盘 (90m)', mve: '精读1页笔记或推导1题', weight: 3 },
+          { id: 'h2', name: '学术外语精读与写作训练', mve: '摘录并造句 3 个高频词', weight: 3 },
+          { id: 'h3', name: '力量训练 / 竞技体能训练', mve: '15分钟拉伸 + 3组自重', weight: 2 },
+          { id: 'h4', name: '代码构建 / 量化市场研究', mve: '核对核心标的或提代码', weight: 2 },
+          { id: 'h5', name: '23:30 断网与作息纪律', mve: '手机移出卧室', weight: 1 }
+        ],
+        logs: {
+          'h1': { [d0]: 1, [d1]: 1, [d2]: 0.5 },
+          'h2': { [d0]: 1, [d1]: 0.5, [d2]: 1 },
+          'h3': { [d0]: 1, [d1]: 0, [d2]: 1 },
+          'h4': { [d0]: 0.5, [d1]: 0, [d2]: 0 },
+          'h5': { [d0]: 1, [d1]: 1, [d2]: 1 }
+        }
+      };
+    }
+
+    function loadStore() {
+      try {
+        const raw = localStorage.getItem(KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {
+        if (fallbackMemory) return fallbackMemory;
+      }
+      const init = getInitialData();
+      saveStore(init);
+      return init;
+    }
+
+    function saveStore(data) {
+      fallbackMemory = data;
+      try {
+        localStorage.setItem(KEY, JSON.stringify(data));
+      } catch (e) {}
+    }
+
+    let store = loadStore();
+
+    // 日期工具
+    function toISO(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function getWeekDates(offset) {
+      const now = new Date();
+      const todayISO = toISO(now);
+      const day = now.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      
+      const mon = new Date(now);
+      mon.setDate(now.getDate() + diff + offset * 7);
+
+      const res = [];
+      const names = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+      for (let i = 0; i < 7; i++) {
+        const cur = new Date(mon);
+        cur.setDate(mon.getDate() + i);
+        const iso = toISO(cur);
+        res.push({
+          iso: iso,
+          label: names[i],
+          display: `${String(cur.getMonth()+1).padStart(2,'0')}/${String(cur.getDate()).padStart(2,'0')}`,
+          isToday: iso === todayISO
+        });
+      }
+      return res;
+    }
+
+    function calcStreak(habitId) {
+      const logs = store.logs[habitId] || {};
+      const cur = new Date();
+      let streak = 0;
+      if (!logs[toISO(cur)] || logs[toISO(cur)] === 0) {
+        cur.setDate(cur.getDate() - 1);
+      }
+      while (true) {
+        const iso = toISO(cur);
+        if (logs[iso] > 0) {
+          streak++;
+          cur.setDate(cur.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+      return streak;
+    }
+
+    // 交互操作
+    function toggle(hId, iso) {
+      if (!store.logs[hId]) store.logs[hId] = {};
+      const current = store.logs[hId][iso] || 0;
+      let next = 0;
+      if (current === 0) next = 1;
+      else if (current === 1) next = 0.5;
+      else next = 0;
+
+      if (next === 0) delete store.logs[hId][iso];
+      else store.logs[hId][iso] = next;
+
+      saveStore(store);
+      render();
+    }
+
+    function addNewHabit() {
+      const name = document.getElementById('inp-name').value.trim();
+      const mve = document.getElementById('inp-mve').value.trim() || '5分钟保底底线';
+      const weight = parseInt(document.getElementById('inp-weight').value, 10);
+      if (!name) return alert('请输入习惯名称！');
+
+      const id = 'h_' + Date.now();
+      store.habits.push({ id, name, mve, weight });
+      store.logs[id] = {};
+      saveStore(store);
+
+      document.getElementById('inp-name').value = '';
+      document.getElementById('inp-mve').value = '';
+      render();
+    }
+
+    function delHabit(id) {
+      if (!confirm('确定删除此项？')) return;
+      store.habits = store.habits.filter(h => h.id !== id);
+      delete store.logs[id];
+      saveStore(store);
+      render();
+    }
+
+    function shiftWeek(n) { weekOffset += n; render(); }
+    function goToday() { weekOffset = 0; render(); }
+
+    function resetDemo() {
+      store = getInitialData();
+      saveStore(store);
+      weekOffset = 0;
+      render();
+    }
+
+    function clearLogs() {
+      if (!confirm('确定清空所有历史打卡记录？')) return;
+      store.logs = {};
+      saveStore(store);
+      render();
+    }
+
+    function exportJSON() {
+      const str = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(store, null, 2));
+      const a = document.createElement('a');
+      a.href = str;
+      a.download = `habits_backup_${toISO(new Date())}.json`;
+      a.click();
+    }
+
+    // 界面渲染
+    function render() {
+      const days = getWeekDates(weekOffset);
+      document.getElementById('week-label').innerText = `${days[0].iso} ~ ${days[6].iso}`;
+
+      // 1. 渲染表头
+      let headHTML = `<th style="width:280px;">习惯与保底动作 (MVE)</th><th style="text-align:center; width:80px;">权重</th>`;
+      days.forEach(d => {
+        headHTML += `<th style="text-align:center;" class="${d.isToday ? 'th-today' : ''}">
+          <div>${d.label}</div>
+          <div class="mono" style="font-size:10px; opacity:0.7;">${d.display}</div>
+        </th>`;
+      });
+      headHTML += `<th style="text-align:center; width:80px;">连续</th><th style="text-align:center; width:80px;">达成率</th><th style="width:40px;"></th>`;
+      document.getElementById('matrix-head').innerHTML = headHTML;
+
+      // 2. 渲染矩阵行
+      let bodyHTML = '';
+      const todayISO = toISO(new Date());
+      let totalW = 0;
+      let todayScore = 0;
+      let weekEarned = 0;
+      let bestStreak = 0;
+      let bestName = '-';
+      let weakestRate = 101;
+      let weakestName = '无短板';
+
+      store.habits.forEach(h => {
+        totalW += h.weight;
+        const hLogs = store.logs[h.id] || {};
+        let hWeekSum = 0;
+
+        let cells = '';
+        days.forEach(d => {
+          const val = hLogs[d.iso] || 0;
+          hWeekSum += val;
+          if (d.iso === todayISO) todayScore += val * h.weight;
+          weekEarned += val * h.weight;
+
+          let cls = 'status-0';
+          let icon = '';
+          if (val === 1) { cls = 'status-1'; icon = '✓'; }
+          else if (val === 0.5) { cls = 'status-05'; icon = '⚡'; }
+
+          cells += `<td style="text-align:center;" class="${d.isToday ? 'cell-today' : ''}">
+            <button class="check-btn ${cls}" onclick="toggle('${h.id}', '${d.iso}')">${icon}</button>
+          </td>`;
+        });
+
+        const streak = calcStreak(h.id);
+        if (streak > bestStreak) { bestStreak = streak; bestName = h.name; }
+
+        const hRate = Math.round((hWeekSum / 7) * 100);
+        if (hRate < weakestRate) { weakestRate = hRate; weakestName = h.name; }
+
+        const rateColor = hRate >= 80 ? 'var(--emerald)' : hRate >= 50 ? 'var(--amber)' : 'var(--rose)';
+
+        bodyHTML += `<tr>
+          <td>
+            <div style="font-weight:600;">${h.name}</div>
+            <div style="font-size:11px; color:var(--text-muted);">⚡ 保底: ${h.mve}</div>
+          </td>
+          <td style="text-align:center;">
+            <span class="tag tag-${h.weight}">${h.weight}x</span>
+          </td>
+          ${cells}
+          <td style="text-align:center;" class="mono" style="font-weight:bold; color:var(--amber);">${streak} 天</td>
+          <td style="text-align:center;" class="mono" style="font-weight:bold; color:${rateColor};">${hRate}%</td>
+          <td style="text-align:right;">
+            <button class="btn btn-danger" style="padding:2px 6px; font-size:11px;" onclick="delHabit('${h.id}')">✕</button>
+          </td>
+        </tr>`;
+      });
+
+      document.getElementById('matrix-body').innerHTML = bodyHTML || `<tr><td colspan="12" style="text-align:center; padding:30px; color:var(--text-muted);">暂无习惯项目，请在下方表单添加。</td></tr>`;
+
+      // 3. 统计 KPI
+      const todayPct = totalW > 0 ? Math.round((todayScore / totalW) * 100) : 0;
+      const weekMax = totalW * 7;
+      const weekPct = weekMax > 0 ? Math.round((weekEarned / weekMax) * 100) : 0;
+
+      document.getElementById('kpi-today').innerText = `${todayPct}%`;
+      document.getElementById('kpi-today-sub').innerText = `${todayScore.toFixed(1)} / ${totalW} 权重分`;
+      document.getElementById('kpi-today-bar').style.width = `${todayPct}%`;
+
+      document.getElementById('kpi-week').innerText = `${weekPct}%`;
+      document.getElementById('kpi-week-bar').style.width = `${weekPct}%`;
+
+      document.getElementById('kpi-streak').innerText = `${bestStreak} 天`;
+      document.getElementById('kpi-streak-name').innerText = bestName;
+
+      if (store.habits.length > 0) {
+        document.getElementById('kpi-weakest-name').innerText = weakestName;
+        document.getElementById('kpi-weakest-rate').innerText = `本周达成率: ${weakestRate}%`;
+      }
+
+      // 4. 原生图表 1: 每日柱状图
+      let chart1HTML = '';
+      days.forEach(d => {
+        let fullW = 0, mveW = 0;
+        store.habits.forEach(h => {
+          const v = (store.logs[h.id] || {})[d.iso] || 0;
+          if (v === 1) fullW += h.weight;
+          else if (v === 0.5) mveW += h.weight * 0.5;
+        });
+        const fullH = totalW > 0 ? Math.round((fullW / totalW) * 140) : 0;
+        const mveH = totalW > 0 ? Math.round((mveW / totalW) * 140) : 0;
+
+        chart1HTML += `
+          <div class="bar-col">
+            <div class="bar-stack" style="height:140px; background:#1e293b;">
+              <div class="bar-seg-full" style="height:${fullH}px;"></div>
+              <div class="bar-seg-mve" style="height:${mveH}px;"></div>
+            </div>
+            <div class="bar-label mono">${d.label}</div>
+          </div>`;
+      });
+      document.getElementById('daily-bar-container').innerHTML = chart1HTML;
+
+      // 5. 原生图表 2: 单项习惯横向对比
+      let chart2HTML = '';
+      store.habits.forEach(h => {
+        let sum = 0;
+        days.forEach(d => { sum += (store.logs[h.id] || {})[d.iso] || 0; });
+        const pct = Math.round((sum / 7) * 100);
+        const col = pct >= 80 ? 'var(--emerald)' : pct >= 60 ? 'var(--indigo)' : 'var(--rose)';
+
+        chart2HTML += `
+          <div class="h-bar-row">
+            <div class="h-bar-label" title="${h.name}">${h.name}</div>
+            <div class="h-bar-track">
+              <div class="h-bar-fill" style="width:${pct}%; background:${col};"></div>
+            </div>
+            <div class="mono" style="width:40px; text-align:right; font-weight:bold; color:${col};">${pct}%</div>
+          </div>`;
+      });
+      document.getElementById('habit-bar-container').innerHTML = chart2HTML;
+    }
+
+    // 启动渲染
+    render();
+  </script>
+</body>
+</html>
